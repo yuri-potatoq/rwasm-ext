@@ -1,0 +1,7 @@
+# Nix
+result
+# Rust build
+target
+
+# wasm-pack build
+pkg/

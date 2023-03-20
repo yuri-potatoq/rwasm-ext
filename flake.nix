@@ -30,32 +30,34 @@
             targets = [ "wasm32-unknown-unknown" ];
           };
 
-          # TODO: fix derivation build error
-          # drv-build-error: [6] Couldn't resolve host name (Could not resolve host: index.crates.io)
-          wasm32-build = pkgs.stdenv.mkDerivation {
-            name = project-name;
-            src = ./.;
-            installPhase = ''
-              cp -r $src $out
-              cargo check
-            '';
-            buildPhase = ''
-              wasm-pack build --target=no-modules
-            '';
-            # RUSTFLAGS="-C linker=lld";
-            nativeBuildInputs = with pkgs; [
-              rust-toolchain
-              wasm-pack
-              wasm-bindgen-cli              
-            ];
-            # Set Environment Variables
-            RUST_BACKTRACE = 1;
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = rust-toolchain;
+            rustc = rust-toolchain;
           };
         in
         rec {
           # `nix build`
-          packages."${project-name}" = wasm32-build;
-          defaultPackage = packages."${project-name}";
+          packages.default = rustPlatform.buildRustPackage {
+            pname = "wwasm";
+            version = "0.0.1";
+            src = ./.;
+            cargoHash = "sha256-tKZgG6R4lfN+owo1zXrY84WUvNfLomgNdNTD56gPGuc=";            
+            buildPhase = ''
+              wasm-pack build --target=no-modules
+            '';
+            installPhase = ''
+              mkdir -p $out
+              cp -r ./pkg $out
+              cp -rf ./_pkg/* $out/pkg
+              cd $out && chromium --pack-extension=pkg --no-message-box
+              rm -r pkg
+            '';
+            nativeBuildInputs = with pkgs; [
+              wasm-pack
+              wasm-bindgen-cli
+              chromium
+            ];
+          };
 
           # `nix develop`
           devShell = pkgs.mkShell {
